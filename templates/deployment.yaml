@@ -46,7 +46,7 @@ spec:
            --wallet-storage-type 'postgres_storage' \
            --wallet-name {{ include "acapy.database" . }} \
            --wallet-key \"$(WALLET_KEY)\" \
-           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" }}:{{ include "acapy.dbPort" }}\",\"max_connections\":5}' \
+           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" . }}:{{ include "acapy.dbPort" . }}\",\"max_connections\":5}' \
            --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
            --seed \"$(WALLET_SEED)\" \
            --genesis-transactions-list genesis-transaction-list.yaml \
@@ -97,7 +97,7 @@ spec:
            --wallet-storage-type 'postgres_storage' \
            --wallet-name {{ include "acapy.database" . }} \
            --wallet-key \"$(WALLET_KEY)\" \
-           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" }}:{{ include "acapy.dbPort" }}\",\"max_connections\":5}' \
+           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" . }}:{{ include "acapy.dbPort" . }}\",\"max_connections\":5}' \
            --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
            --admin-api-key \"$(ADMIN_URL_API_KEY)\" \
            --label {{ $acapyLabel }} \

@@ -1,0 +1,6 @@
+dependencies:
+- name: diode
+  repository: file://../diode-chart/
+  version: 0.1.0
+digest: sha256:5de1094682d4c393c5b888d5723d608124be91abeab46a2da3344b3f473a829c
+generated: "2023-03-21T17:41:55.44287067-05:00"
