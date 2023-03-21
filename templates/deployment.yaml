@@ -1,61 +1,233 @@
+{{- $acapyLabel := include "acapy.label" . -}}
+{{- $globalName := include "global.name"  . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "acapy-chart.fullname" . }}
+  name: {{ include "acapy.fullname" . }}
   labels:
-    {{- include "acapy-chart.labels" . | nindent 4 }}
+    {{- include "acapy.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
-      {{- include "acapy-chart.selectorLabels" . | nindent 6 }}
+      {{- include "acapy.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if and (not .Values.postgresql.enabled) (not .Values.global.persistence.existingSecret) }}
+        checksum/configDB: {{ include (print $.Template.BasePath "/db-secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.global.persistence.existingSecret }}
+        rollme: {{ randAlphaNum 5 | quote }}
+        {{- end }}
+    {{- with .Values.acapy.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+    {{- end }}
       labels:
-        {{- include "acapy-chart.selectorLabels" . | nindent 8 }}
+        {{- include "acapy.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.acapy.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "acapy-chart.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.acapy.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: acapy-provision
+          image: "{{ .Values.acapy.image.repository }}:{{ .Values.acapy.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.acapy.image.pullPolicy }}
+          args: [
+           "-c",
+           "{{ include "acapy.registerLedger" . }} \
+           sleep 15; \
+           aca-py provision \
+           --endpoint \"$(ENDPOINT)\" \
+           --wallet-type {{ .Values.acapy.staticArgs.walletType }} \
+           --wallet-storage-type 'postgres_storage' \
+           --wallet-name {{ include "acapy.database" . }} \
+           --wallet-key \"$(WALLET_KEY)\" \
+           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" }}:{{ include "acapy.dbPort" }}\",\"max_connections\":5}' \
+           --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
+           --seed \"$(WALLET_SEED)\" \
+           --genesis-transactions-list genesis-transaction-list.yaml \
+           --log-level {{ .Values.acapy.staticArgs.logLevel }} \
+           "
+          ]
+          command:
+          - /bin/bash
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "global.postgresql.fullname" . }}
+                  key: postgresql-password
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "global.postgresql.fullname" . }}
+                  key: postgresql-username
+            - name: WALLET_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "acapy.fullname" . }}
+                  key: ACAPY_AGENT_SEED
+            - name: WALLET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "acapy.fullname" . }}
+                  key: ACAPY_WALLET_KEY
+          volumeMounts:
+          - name: ledger
+            mountPath: "/home/indy/genesis-transaction-list.yaml"
+            subPath: "genesis-transaction-list.yaml"
+            readOnly: true
       containers:
-        - name: {{ .Chart.Name }}
+        - name: acapy
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- toYaml .Values.acapy.securityContext | nindent 12 }}
+          image: "{{ .Values.acapy.image.repository }}:{{ .Values.acapy.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.acapy.image.pullPolicy }}
+          args: [
+           "-c",
+           "aca-py start \
+           --arg-file acapy-static-args.yml \
+           --inbound-transport http '0.0.0.0' {{ .Values.acapy.service.httpPort }} \
+           --genesis-transactions-list genesis-transaction-list.yaml \
+           --endpoint \"{{ .Values.acapy.endPointUrl }}\" \
+           --wallet-storage-type 'postgres_storage' \
+           --wallet-name {{ include "acapy.database" . }} \
+           --wallet-key \"$(WALLET_KEY)\" \
+           --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" }}:{{ include "acapy.dbPort" }}\",\"max_connections\":5}' \
+           --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
+           --admin-api-key \"$(ADMIN_URL_API_KEY)\" \
+           --label {{ $acapyLabel }} \
+           {{- if .Values.acapy.tails.enabled }}
+           --tails-server-base-url {{ include "acapy.tails.baseUrl" . }} \
+           --tails-server-upload-url {{ include "acapy.tails.uploadUrl" . }} \
+           {{- end }}
+           {{- if .Values.acapy.admin.enabled -}}
+           --admin '{{ .Values.acapy.admin.host }}' {{ .Values.acapy.service.adminPort }} \
+           {{- end }}
+           {{- if .Values.acapy.admin.apiKey.enabled -}}
+           --admin-api-key $(ACAPY_ADMIN_URL_API_KEY) \
+           {{- else -}}
+           --admin-insecure-mode \
+           {{- end -}}
+           {{- if .Values.acapy.readOnlyMode }}
+           --read-only-ledger \
+           {{- end }}
+           {{- if .Values.acapy.webhookUrl }}
+           --webhook-url \
+           {{- end }}
+           {{- if .Values.acapy.invite }}
+           --invite \
+           {{- end }}
+           {{- if .Values.acapy.inviteLabel }}
+           --invite-label \
+           {{- end }}
+           {{- if .Values.acapy.trace }}
+           --trace \
+           {{- end }}
+           {{- if .Values.acapy.traceTarget }}
+           --trace-target \
+           {{- end }}
+           {{- if .Values.acapy.traceTag }}
+           --trace-tag \
+           {{- end }}
+           {{- if .Values.acapy.traceLabel }}
+           --trace-label \
+           {{- end }}
+           {{- if .Values.acapy.imageUrl }}
+           --image-url \
+           {{- end }}
+           {{- if .Values.acapy.walletRekey }}
+           --wallet-rekey \
+           {{- end }}
+           {{- if .Values.acapy.replacePublic }}
+           --replace-public-did \
+           {{- end }}
+           {{- if .Values.acapy.recreateWallet }}
+           --recreate-wallet \
+           {{- end }}
+           "
+          ]
+          command:
+          - /bin/bash
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.acapy.service.httpPort }}
               protocol: TCP
+            - name: admin
+              containerPort: {{ .Values.acapy.service.adminPort }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "global.postgresql.fullname" . }}
+                  key: postgresql-password
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "global.postgresql.fullname" . }}
+                  key: postgresql-username
+            {{- if .Values.acapy.admin.apiKey -}}
+            - name: ADMIN_URL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "acapy.fullname" . }}
+                  key: ACAPY_ADMIN_URL_API_KEY
+            {{- end -}}
+            - name: WALLET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "acapy.fullname" . }}
+                  key: ACAPY_WALLET_KEY
           livenessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /status/live
+              port: {{ .Values.acapy.service.adminPort }}
+            initialDelaySeconds: 45
+            periodSeconds: 3
           readinessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /status/ready
+              port: {{ .Values.acapy.service.adminPort }}
+            initialDelaySeconds: 20
+            periodSeconds: 10    
+          volumeMounts:
+          - name: config
+            mountPath: "/home/indy/acapy-static-args.yml"
+            subPath: "acapy-static-args.yml"
+            readOnly: true
+          - name: ledger
+            mountPath: "/home/indy/genesis-transaction-list.yaml"
+            subPath: "genesis-transaction-list.yaml"
+            readOnly: true
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+            {{- toYaml .Values.acapy.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "acapy.fullname" . }}
+            items:
+            - key: "acapy-static-args.yaml"
+              path: "acapy-static-args.yml"
+        - name: ledger
+          configMap:
+            name: {{ include "acapy.fullname" . }}
+            items:
+            - key: "genesis-transaction-list.yaml"
+              path: "genesis-transaction-list.yaml"
+      {{- with .Values.acapy.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.acapy.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.acapy.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

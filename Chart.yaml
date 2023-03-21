@@ -1,6 +1,6 @@
 apiVersion: v2
-name: acapy-chart
-description: A Helm chart for Kubernetes
+name: acapy
+description: A Helm chart to deploy Aries Cloud Agent Python using kubernetes
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -22,3 +22,11 @@ version: 0.1.0
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "1.16.0"
+home: "https://github.com/MonolithicMonk/acapy-chart"
+sources: ["https://github.com/MonolithicMonk/acapy-chart"]
+
+dependencies:
+  - name: diode
+    version: 0.1.0
+    repository: file://../diode-chart/
+    condition: diode.enabled

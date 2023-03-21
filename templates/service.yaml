@@ -1,15 +1,22 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "acapy-chart.fullname" . }}
+  name: {{ include "acapy.fullname" . }}
   labels:
-    {{- include "acapy-chart.labels" . | nindent 4 }}
+    {{- include "acapy.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.acapy.service.type }}
+{{- if .Values.acapy.service.clusterIP }}
+  clusterIP: {{ .Values.acapy.service.clusterIP }}
+{{- end }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.acapy.service.httpPort }}
       targetPort: http
       protocol: TCP
       name: http
+    - port: {{ .Values.acapy.service.adminPort }}
+      targetPort: admin
+      protocol: TCP
+      name: admin
   selector:
-    {{- include "acapy-chart.selectorLabels" . | nindent 4 }}
+    {{- include "acapy.selectorLabels" . | nindent 4 }}

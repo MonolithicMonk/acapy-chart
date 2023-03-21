@@ -1,8 +1,8 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "acapy-chart.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- define "global.name" -}}
+{{- default .Chart.Name .Values.global.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -10,11 +10,11 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "acapy-chart.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- define "global.fullname" -}}
+{{- if .Values.global.fullnameOverride }}
+{{- .Values.global.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- $name := default .Chart.Name .Values.global.nameOverride }}
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,48 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "acapy-chart.chart" -}}
+{{- define "global.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Common labels
+Create a default fully qualified app name for the postgres requirement.
 */}}
-{{- define "acapy-chart.labels" -}}
-helm.sh/chart: {{ include "acapy-chart.chart" . }}
-{{ include "acapy-chart.selectorLabels" . }}
+{{- define "global.postgresql.fullname" -}}
+  {{- if .Values.postgresql.enabled -}}
+    {{- $postgresContext := dict "Values" .Values.postgresql "Release" .Release "Chart" (dict "Name" "postgresql") -}}
+    {{ template "postgresql.primary.fullname" $postgresContext }}
+  {{- else -}}
+    {{- $fullname := default (printf "%s-postgresql" .Release.Name) .Values.postgresql.fullnameOverride -}}
+    {{- printf "%s" $fullname | trunc 63 -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Create the name for the password secret key. TODO currently not used, either delete or migrate key generation to template function
+*/}}
+{{- define "global.dbPasswordKey" -}}
+{{- if .Values.global.persistence.existingSecret -}}
+  {{- .Values.global.persistence.existingSecretKey -}}
+{{- else -}}
+  postgresql-password
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified acapy name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "acapy.fullname" -}}
+{{ template "global.fullname" . }}
+{{- end -}}
+
+{{/*
+Common acapy labels
+*/}}
+{{- define "acapy.labels" -}}
+helm.sh/chart: {{ include "global.chart" . }}
+{{ include "acapy.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,20 +75,135 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+Selector acapy labels
 */}}
-{{- define "acapy-chart.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "acapy-chart.name" . }}
+{{- define "acapy.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "global.fullname" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+generate hosts if not overriden
 */}}
-{{- define "acapy-chart.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "acapy-chart.fullname" .) .Values.serviceAccount.name }}
+{{- define "acapy.host" -}}
+{{- if .Values.acapy.ingress.hosts -}}
+{{- (index .Values.acapy.ingress.hosts 0).host -}}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- include "acapy.fullname" . }}{{ .Values.global.ingressSuffix -}}
+{{- end -}}
 {{- end }}
+
+{{/*
+generate ledger browser url
+*/}}
+{{- define "acapy.ledgerBrowser" -}}
+{{- $ledgerBrowser := dict "idu" "" "bcovrin-test" "http://test.bcovrin.vonx.io" -}}
+{{ get $ledgerBrowser .Values.global.ledger }}
 {{- end }}
+
+{{/*
+Get the password secret.
+*/}}
+{{- define "acapy.secretName" -}}
+{{- if .Values.acapy.existingSecret -}}
+    {{- printf "%s" (tpl .Values.acapy.existingSecret $) -}}
+{{- else -}}
+    {{- printf "%s" (include "acapy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return true if we should use an existingSecret.
+*/}}
+{{- define "acapy.useExistingSecret" -}}
+{{- if .Values.existingSecret -}}
+    {{- true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return true if a secret object should be created
+*/}}
+{{- define "acapy.createSecret" -}}
+{{- if not (include "acapy.useExistingSecret" .) -}}
+    {{- true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return acapy initialization call
+*/}}
+{{- define "acapy.registerLedger" -}}
+{{- if (eq .Values.global.ledger "bcovrin-test") -}}
+curl -d '{\"seed\":\"$(WALLET_SEED)\", \"role\":\"TRUST_ANCHOR\", \"alias\":\"{{ include "acapy.fullname" . }}\"}' -X POST {{ include "acapy.ledgerBrowser" . }}/register;
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return acapy label
+*/}}
+{{- define "acapy.label" -}}
+{{- if .Values.acapy.labelOverride -}}
+    {{- .Values.acapy.labelOverride }} 
+{{- else -}} 
+    {{- .Release.Name }}     
+{{- end -}}
+{{- end -}}
+
+{{/*
+generate tails baseUrl
+*/}}
+{{- define "acapy.tails.baseUrl" -}}
+{{- $tailsBaseUrl := dict "bcovrin-test" "https://tails-test.vonx.io" "idu" (printf "https://tails%s" .Values.global.ingressSuffix) -}}
+{{ .Values.acapy.tails.baseUrlOverride | default ( get $tailsBaseUrl .Values.global.ledger ) }}
+{{- end }}
+
+{{/*
+generate tails uploadUrl
+*/}}
+{{- define "acapy.tails.uploadUrl" -}}
+{{- $tailsUploadUrl:= dict "bcovrin-test" "https://tails-test.vonx.io" "idu" "http://idu-tails:6543" -}}
+{{ .Values.acapy.tails.uploadUrlOverride| default ( get $tailsUploadUrl .Values.global.ledger ) }}
+{{- end }}
+
+{{/*
+determine if write ledger
+*/}}
+{{- define "acapy.writeLedger" -}}
+{{- $top := index . 0 -}}
+{{- $ledgerName := index . 1 "ledger" -}}
+{{- if and (eq $top.Values.global.ledger $ledgerName) (not $top.Values.acapy.readOnlyMode) -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end }}
+
+{{/*
+determine acapy database name
+*/}}
+{{- define "acapy.database" -}}
+{{ default .Values.postgresql.postgresqlDatabase .Values.acapy.postgresql.database }} 
+{{- end -}}
+
+{{/*
+determine acapy database hostname
+*/}}
+{{- define "acapy.dbHost" -}}
+{{- if .Values.diode.enabled -}}
+    {{ template "diode.fullname" .Subcharts.diode }}.{{ .Release.Namespace | default "default" }}.svc.cluster.local
+{{- else -}} 
+    {{ .Values.postgresql.service.hostname | quote }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+determine acapy database port
+*/}}
+{{- define "acapy.dbPort" -}}
+{{- if .Values.diode.enabled -}}
+    {{ .Values.diode.service.port }}
+{{- else -}} 
+    {{ .Values.postgresql.service.port }}
+{{- end -}}
+{{- end -}}

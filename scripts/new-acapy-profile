@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Ask the user for a database name
+echo "Enter a name for this deployment:"
+read deploy_name
+
+# Replace any spaces with underscores
+deploy_name=${deploy_name// /_}
+
+# Convert the name to lowercase
+deploy_name=$(echo "$deploy_name" | tr '[:upper:]' '[:lower:]')
+
+# Add a timestamp to the end of the name
+# Generate a database name
+timestamp=$(date +"%Y%m%d%H%M%S")
+dbname="$deploy_name"_"$timestamp"
+
+
+# Generate Agent Seed
+echo "Generating new Seed"
+agent_seed=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+
+# Generate a admin api key
+echo "Generating new admin api key"
+api_key=$(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 256 | shuf | head -n 1)
+
+# Generate a wallet key
+echo "Generating new Seed"
+wallet_key=$(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 256 | shuf | head -n 1)
+
+# Generate Release Name (fullnameOverride)
+release_name=${deploy_name//_/-}
+
+
+echo "================================================================"
+echo "Generated Values:"
+echo "================================================================"
+echo " "
+
+echo "Release Name: $release_name"
+echo " "
+echo "Admin API Key: $api_key"
+echo " "
+echo "Agent Seed: $agent_seed"
+echo " "
+echo "Wallet Key: $wallet_key"
+echo " "
+echo "Database Name: $dbname"
