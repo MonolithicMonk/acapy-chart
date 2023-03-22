@@ -38,18 +38,18 @@ acapy:
     # administrative server. If not provided, no admin
     # server is made available.
     # Readiness and liveness checks will fail if not enabled
-    enabled: true
+    enabled: 
     host: 0.0.0.0
     # Enable or disable admin url api key
     apiKey:
-      enabled: true
+      enabled:
       # -- Please change: key used to protect acapy's admin endpoint
-      adminURLApiKey: "nD0dagPDszlTam6xgqatuoXrDhgtaDijhIdUOBEV53Pcp9WxLgg5fGCotvGdfMnu1iyfBwyM6ewkWQCVcz0iF8BDm1d2SnBJ8YkX1klu7Za2gKTbBBBg0bFfDZEPUMa06iFMC0QxyeLlwHX2cYSNv8xTMt0lNwaUo3qgjYiRNFLE5KsQ50OPwZ3w1Aoiv7UFOOWBMS7S0ayblzNTZdTsL6wxyuCfHndagJ5wIyudA3SCV58OahpRQErHCAcuUyJc"
+      adminURLApiKey: ""
   
   # -- Please change: the agent seed, 32 characters e.g. a UUID without the dashes. If the ledger is bcovrin-test the seed will be registered automatically. In all other cases this needs to happen manually beforehand.
-  agentSeed: "vW8Y7XldpEM6OpLFMWChj60gGsKYS95g"
+  agentSeed: ""
   # -- Please change: Wallet encryption key, be aware that if this value is changed later aca-py needs to be restarted with the '--wallet-rekey' param which is not mapped
-  walletKey: "bamcILkTGIhdcNXoGaEdaNHQQyuED1kpL13f0jktIMjL5seFhPAH6yUnZ8F5tTNzO70OZe0VFukAG7pZrQhlEgwuchdIZPFhzuSbEPJiNVC034i8HWNgwlRh1H6A78KlLHy2RAGKAVLlnikzuomsEMJZ2f76szwtP1uDtU7Y7zAosKD0AiZYfLdS5JQIwr6Ngaz11hiHimtBSxMgMs2voTtjSfCQlBK5N4Zb2ErPThXmnSSWWXlX86G3f9zAtbJH"
+  walletKey: ""
   
   # Send webhooks containing internal state changes to the
   # specified URL. Optional API key to be passed in the
@@ -65,13 +65,13 @@ acapy:
   inviteLabel: ""
 
   # Generate tracing events.  Default: false
-  trace: true
+  trace:
 
   # Target for trace events ("log", "message", or http endpoint)
-  traceTarget: "log"
+  traceTarget: ""
 
   # Tag to be included when logging events
-  traceTag: "testers"
+  traceTag: ""
 
   # Label (agent name) used logging events
   traceLabel: ""
@@ -143,7 +143,7 @@ acapy:
 
   service:
     type: ClusterIP
-    clusterIP: 10.43.156.49
+    clusterIP: 
     adminPort: 8031
     httpPort: 8030
 
@@ -222,17 +222,17 @@ postgresql:
 
   # --  PostgreSQL service configuration
   service:
-    port: 5433
-    hostname: yb-tserver-service.default.svc.cluster.local
+    port: 
+    hostname: ""
 
   # --  PostgreSQL User to create. Do not change - otherwise non-admin user is created!
-  postgresqlUsername: "newuser"
+  postgresqlUsername: ""
 
   # --  PostgreSQL Password for the new user. If not set, a random 10 characters password will be used.
-  postgresqlPassword: "newpassword"
+  postgresqlPassword: ""
 
   # -- PostgreSQL Database to create.
-  postgresqlDatabase: "acapy_deploy_20230321174540"
+  postgresqlDatabase: ""
 
   tls:
     # -- Enable TLS traffic support
