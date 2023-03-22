@@ -193,7 +193,7 @@ determine acapy database hostname
 {{- if .Values.diode.enabled -}}
     {{ template "diode.fullname" .Subcharts.diode }}.{{ .Release.Namespace | default "default" }}.svc.cluster.local
 {{- else -}} 
-    {{ .Values.postgresql.service.hostname | quote }}
+    {{ .Values.postgresql.service.hostname }}
 {{- end -}}
 {{- end -}}
 

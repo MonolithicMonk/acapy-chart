@@ -99,49 +99,48 @@ spec:
            --wallet-key \"$(WALLET_KEY)\" \
            --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" . }}:{{ include "acapy.dbPort" . }}\",\"max_connections\":5}' \
            --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
-           --admin-api-key \"$(ADMIN_URL_API_KEY)\" \
            --label {{ $acapyLabel }} \
            {{- if .Values.acapy.tails.enabled }}
            --tails-server-base-url {{ include "acapy.tails.baseUrl" . }} \
            --tails-server-upload-url {{ include "acapy.tails.uploadUrl" . }} \
            {{- end }}
-           {{- if .Values.acapy.admin.enabled -}}
+           {{- if .Values.acapy.admin.enabled }}
            --admin '{{ .Values.acapy.admin.host }}' {{ .Values.acapy.service.adminPort }} \
            {{- end }}
-           {{- if .Values.acapy.admin.apiKey.enabled -}}
-           --admin-api-key $(ACAPY_ADMIN_URL_API_KEY) \
-           {{- else -}}
+           {{- if .Values.acapy.admin.apiKey.enabled }}
+           --admin-api-key $(ADMIN_URL_API_KEY) \
+           {{- else }}
            --admin-insecure-mode \
-           {{- end -}}
+           {{- end }}
            {{- if .Values.acapy.readOnlyMode }}
            --read-only-ledger \
            {{- end }}
            {{- if .Values.acapy.webhookUrl }}
-           --webhook-url \
+           --webhook-url {{ .Values.acapy.webhookUrl }}\
            {{- end }}
            {{- if .Values.acapy.invite }}
            --invite \
            {{- end }}
            {{- if .Values.acapy.inviteLabel }}
-           --invite-label \
+           --invite-label {{ .Values.acapy.inviteLabel }} \
            {{- end }}
            {{- if .Values.acapy.trace }}
            --trace \
            {{- end }}
            {{- if .Values.acapy.traceTarget }}
-           --trace-target \
+           --trace-target {{ .Values.acapy.traceTarget }} \
            {{- end }}
            {{- if .Values.acapy.traceTag }}
-           --trace-tag \
+           --trace-tag {{ .Values.acapy.traceTag }} \
            {{- end }}
            {{- if .Values.acapy.traceLabel }}
-           --trace-label \
+           --trace-label {{ .Values.acapy.traceLabel }} \
            {{- end }}
            {{- if .Values.acapy.imageUrl }}
-           --image-url \
+           --image-url {{ .Values.acapy.imageUrl }} \
            {{- end }}
            {{- if .Values.acapy.walletRekey }}
-           --wallet-rekey \
+           --wallet-rekey {{ .Values.acapy.walletRekey }} \
            {{- end }}
            {{- if .Values.acapy.replacePublic }}
            --replace-public-did \
@@ -171,13 +170,13 @@ spec:
                 secretKeyRef:
                   name: {{ template "global.postgresql.fullname" . }}
                   key: postgresql-username
-            {{- if .Values.acapy.admin.apiKey -}}
+            {{- if .Values.acapy.admin.apiKey.enabled }}
             - name: ADMIN_URL_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ template "acapy.fullname" . }}
                   key: ACAPY_ADMIN_URL_API_KEY
-            {{- end -}}
+            {{- end }}
             - name: WALLET_KEY
               valueFrom:
                 secretKeyRef:
