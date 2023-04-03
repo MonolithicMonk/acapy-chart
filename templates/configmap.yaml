@@ -6,32 +6,32 @@ metadata:
     {{- include "acapy.labels" . | nindent 4 }}
 data:
   acapy-static-args.yaml: |
-    auto-accept-invites: {{ .Values.acapy.staticArgs.autoAcceptInvites }}
-    auto-accept-requests: {{ .Values.acapy.staticArgs.autoAcceptRequests }}
-    auto-respond-messages: {{ .Values.acapy.staticArgs.autoRespondMessages }}
-    auto-respond-credential-proposal: {{ .Values.acapy.staticArgs.autoRespondCredentialProposal }}
-    auto-respond-credential-offer: {{ .Values.acapy.staticArgs.autoRespondCredentialOffer }}
-    auto-respond-credential-request: {{ .Values.acapy.staticArgs.autoRespondCredentialRequest }}
-    auto-respond-presentation-proposal: {{ .Values.acapy.staticArgs.autoRespondPresentationProposal }}
-    auto-respond-presentation-request: {{ .Values.acapy.staticArgs.autoRespondPresentationRequest }}
-    auto-store-credential: {{ .Values.acapy.staticArgs.autoStoreCredential }}
-    auto-verify-presentation: {{ .Values.acapy.staticArgs.autoVerifyPresentation }}
-    auto-ping-connection: {{ .Values.acapy.staticArgs.autoPingConnection }}
-    auto-provision: {{ .Values.acapy.staticArgs.autoProvision }}
-    auto-disclose-features: {{ .Values.acapy.staticArgs.autoDiscloseFeatures }}
-    notify-revocation: {{ .Values.acapy.staticArgs.notifyRevocation }}
-    monitor-revocation-notification: {{ .Values.acapy.staticArgs.monitorRevocationNotification }}
-    monitor-ping: {{ .Values.acapy.staticArgs.monitorPing }}
-    emit-new-didcomm-prefix: {{ .Values.acapy.staticArgs.emitNewDidcommPrefix }}
-    emit-new-didcomm-mime-type: {{ .Values.acapy.staticArgs.emitNewDidcommMimeType }}
-    enable-undelivered-queue: {{ .Values.acapy.staticArgs.enableUndeliveredQueue }}
-    exch-use-unencrypted-tags: {{ .Values.acapy.staticArgs.exchUseUnencryptedTags }}
-    preserve-exchange-records: {{ .Values.acapy.staticArgs.preserveExchangeRecords }}
-    public-invites: {{ .Values.acapy.staticArgs.publicInvites }}
+    auto-accept-invites: {{ .Values.staticArgs.autoAcceptInvites }}
+    auto-accept-requests: {{ .Values.staticArgs.autoAcceptRequests }}
+    auto-respond-messages: {{ .Values.staticArgs.autoRespondMessages }}
+    auto-respond-credential-proposal: {{ .Values.staticArgs.autoRespondCredentialProposal }}
+    auto-respond-credential-offer: {{ .Values.staticArgs.autoRespondCredentialOffer }}
+    auto-respond-credential-request: {{ .Values.staticArgs.autoRespondCredentialRequest }}
+    auto-respond-presentation-proposal: {{ .Values.staticArgs.autoRespondPresentationProposal }}
+    auto-respond-presentation-request: {{ .Values.staticArgs.autoRespondPresentationRequest }}
+    auto-store-credential: {{ .Values.staticArgs.autoStoreCredential }}
+    auto-verify-presentation: {{ .Values.staticArgs.autoVerifyPresentation }}
+    auto-ping-connection: {{ .Values.staticArgs.autoPingConnection }}
+    auto-provision: {{ .Values.staticArgs.autoProvision }}
+    auto-disclose-features: {{ .Values.staticArgs.autoDiscloseFeatures }}
+    notify-revocation: {{ .Values.staticArgs.notifyRevocation }}
+    monitor-revocation-notification: {{ .Values.staticArgs.monitorRevocationNotification }}
+    monitor-ping: {{ .Values.staticArgs.monitorPing }}
+    emit-new-didcomm-prefix: {{ .Values.staticArgs.emitNewDidcommPrefix }}
+    emit-new-didcomm-mime-type: {{ .Values.staticArgs.emitNewDidcommMimeType }}
+    enable-undelivered-queue: {{ .Values.staticArgs.enableUndeliveredQueue }}
+    exch-use-unencrypted-tags: {{ .Values.staticArgs.exchUseUnencryptedTags }}
+    preserve-exchange-records: {{ .Values.staticArgs.preserveExchangeRecords }}
+    public-invites: {{ .Values.staticArgs.publicInvites }}
     plugin: 'aries_cloudagent.messaging.jsonld'
     outbound-transport: http
-    wallet-type: {{ .Values.acapy.staticArgs.walletType }}
-    log-level: {{ .Values.acapy.staticArgs.logLevel }}
+    wallet-type: {{ .Values.staticArgs.walletType }}
+    log-level: {{ .Values.staticArgs.logLevel }}
   genesis-transaction-list.yaml: |
     - id: bcovrinTest
       is_production: {{ include "acapy.writeLedger" (list . (dict "ledger" "bcovrin-test")) }}

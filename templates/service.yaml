@@ -5,16 +5,16 @@ metadata:
   labels:
     {{- include "acapy.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.acapy.service.type }}
-{{- if .Values.acapy.service.clusterIP }}
-  clusterIP: {{ .Values.acapy.service.clusterIP }}
+  type: {{ .Values.service.type }}
+{{- if .Values.service.clusterIP }}
+  clusterIP: {{ .Values.service.clusterIP }}
 {{- end }}
   ports:
-    - port: {{ .Values.acapy.service.httpPort }}
+    - port: {{ .Values.service.httpPort }}
       targetPort: http
       protocol: TCP
       name: http
-    - port: {{ .Values.acapy.service.adminPort }}
+    - port: {{ .Values.service.adminPort }}
       targetPort: admin
       protocol: TCP
       name: admin

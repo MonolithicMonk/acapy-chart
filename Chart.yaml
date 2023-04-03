@@ -27,6 +27,6 @@ sources: ["https://github.com/MonolithicMonk/acapy-chart"]
 
 dependencies:
   - name: diode
-    version: 0.1.0
+    version: 0.1.7
     repository: file://../diode-chart/
     condition: diode.enabled

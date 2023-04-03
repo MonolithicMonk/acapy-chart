@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "acapy.fullname" . }}:{{ .Values.acapy.service.httpPort }}']
+      args: ['{{ include "acapy.fullname" . }}:{{ .Values.service.httpPort }}']
   restartPolicy: Never

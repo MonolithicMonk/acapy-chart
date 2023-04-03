@@ -18,200 +18,205 @@ global:
   # -- The used ledger. Will be used for default values. Any of: idu, bcovrin-test
   ledger: bcovrin-test
 
-acapy:
-  image:
-    repository: bcgovimages/aries-cloudagent
-    pullPolicy: IfNotPresent
-    # --  Overrides the image tag whose default is the chart appVersion.
-    tag: py36-1.16-1_0.7.4
+image:
+  repository: bcgovimages/aries-cloudagent
+  pullPolicy: IfNotPresent
+  # --  Overrides the image tag whose default is the chart appVersion.
+  tag: py36-1.16-1_0.7.4
 
+endPointUrl: ""
 
-  # -- Used for backwards compatibility
-  postgresql:
-    # -- Can be used to overwrite 'postgresql.postgresqlDatabase', if set acapy and bpa backends use separate databases
-    database: ""
-  
-  endPointUrl: ""
+inbound: 
+  module:
+  host: 
+  port:
 
-  admin:
-    # Specify the host and port on which to run the
-    # administrative server. If not provided, no admin
-    # server is made available.
-    # Readiness and liveness checks will fail if not enabled
-    enabled: 
-    host: 0.0.0.0
-    # Enable or disable admin url api key
-    apiKey:
-      enabled:
-      # -- Please change: key used to protect acapy's admin endpoint
-      adminURLApiKey: ""
-  
-  # -- Please change: the agent seed, 32 characters e.g. a UUID without the dashes. If the ledger is bcovrin-test the seed will be registered automatically. In all other cases this needs to happen manually beforehand.
-  agentSeed: ""
-  # -- Please change: Wallet encryption key, be aware that if this value is changed later aca-py needs to be restarted with the '--wallet-rekey' param which is not mapped
-  walletKey: ""
-  
-  # Send webhooks containing internal state changes to the
-  # specified URL. Optional API key to be passed in the
-  # request body can be appended using a hash separator
-  # [#] <url#api_key>
-  webhookUrl: ""
+admin:
+  # Specify the host and port on which to run the
+  # administrative server. If not provided, no admin
+  # server is made available.
+  # Readiness and liveness checks will fail if not enabled
+  enabled: 
+  host: 0.0.0.0
+  # Enable or disable admin url api key
+  apiKey:
+    enabled:
+    # -- Please change: key used to protect acapy's admin endpoint
+    adminURLApiKey: ""
 
-  # After startup, generate and print a new out-of-band
-  # connection invitation URL. Default: false.
-  invite:
+db:
+  username:
+  password: ""
+  host:
+  port:
+  database:
 
-  # Specify the label of the generated invitation
-  inviteLabel: ""
+# -- Please change: the agent seed, 32 characters e.g. a UUID without the dashes. If the ledger is bcovrin-test the seed will be registered automatically. In all other cases this needs to happen manually beforehand.
+agentSeed: ""
+# -- Please change: Wallet encryption key, be aware that if this value is changed later aca-py needs to be restarted with the '--wallet-rekey' param which is not mapped
+walletKey: ""
 
-  # Generate tracing events.  Default: false
-  trace:
+# Send webhooks containing internal state changes to the
+# specified URL. Optional API key to be passed in the
+# request body can be appended using a hash separator
+# [#] <url#api_key>
+webhookUrl: ""
 
-  # Target for trace events ("log", "message", or http endpoint)
-  traceTarget: ""
+# After startup, generate and print a new out-of-band
+# connection invitation URL. Default: false.
+invite:
 
-  # Tag to be included when logging events
-  traceTag: ""
+# Specify the label of the generated invitation
+inviteLabel: ""
 
-  # Label (agent name) used logging events
-  traceLabel: ""
+# Generate tracing events.  Default: false
+trace:
 
-  # Specifies the image url for this agent.
-  imageUrl: ""
+# Target for trace events ("log", "message", or http endpoint)
+traceTarget: ""
 
-  # Specifies a new master key value to which to rotate
-  # and to open the wallet next time
-  walletRekey: ""
+# Tag to be included when logging events
+traceTag: ""
 
-  # If this parameter is set and an agent already has a
-  # public DID, and the '--seed' parameter specifies a new
-  # DID, the agent will use the new DID in place of the
-  # existing DID. Default: false.
-  replacePublic:
+# Label (agent name) used logging events
+traceLabel: ""
 
-  # If an existing wallet exists with the same name,
-  # remove and recreate it during provisioning.  Default: false
-  recreateWallet:
+# Specifies the image url for this agent.
+imageUrl: ""
 
-  labelOverride: ""
+# Specifies a new master key value to which to rotate
+# and to open the wallet next time
+walletRekey: ""
 
-  readOnlyMode: false
+# If this parameter is set and an agent already has a
+# public DID, and the '--seed' parameter specifies a new
+# DID, the agent will use the new DID in place of the
+# existing DID. Default: false.
+replacePublic:
 
-  staticArgs:
-    autoAcceptInvites: false
-    autoAcceptRequests: false
-    autoRespondMessages: false
-    autoRespondCredentialProposal: false
-    autoRespondCredentialOffer: false
-    autoRespondCredentialRequest: false
-    autoRespondPresentationProposal: true
-    autoRespondPresentationRequest: false
-    autoStoreCredential: true
-    autoVerifyPresentation: false
-    autoPingConnection: true
-    autoProvision: true
-    autoDiscloseFeatures: true
-    notifyRevocation: true
-    monitorRevocationNotification: true
-    monitorPing: true
-    emitNewDidcommPrefix: true
-    emitNewDidcommMimeType: true
-    enableUndeliveredQueue: true
-    exchUseUnencryptedTags: true
-    preserveExchangeRecords: false
-    publicInvites: true
-    # -- indy or askar
-    walletType: askar
-    logLevel: debug
+# If an existing wallet exists with the same name,
+# remove and recreate it during provisioning.  Default: false
+recreateWallet:
 
-  imagePullSecrets: []
-  nameOverride: ""
-  fullnameOverride: ""
+labelOverride: ""
 
-  podAnnotations: {}
+readOnlyMode: false
 
-  podSecurityContext: {}
-    # fsGroup: 2000
+staticArgs:
+  autoAcceptInvites: false
+  autoAcceptRequests: false
+  autoRespondMessages: false
+  autoRespondCredentialProposal: false
+  autoRespondCredentialOffer: false
+  autoRespondCredentialRequest: false
+  autoRespondPresentationProposal: true
+  autoRespondPresentationRequest: false
+  autoStoreCredential: true
+  autoVerifyPresentation: false
+  autoPingConnection: true
+  autoProvision: true
+  autoDiscloseFeatures: true
+  notifyRevocation: true
+  monitorRevocationNotification: true
+  monitorPing: true
+  emitNewDidcommPrefix: true
+  emitNewDidcommMimeType: true
+  enableUndeliveredQueue: true
+  exchUseUnencryptedTags: true
+  preserveExchangeRecords: false
+  publicInvites: true
+  # -- indy or askar
+  walletType: askar
+  logLevel: debug
 
-  securityContext:
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    runAsUser: 1001
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
 
-  service:
-    type: ClusterIP
-    clusterIP: 
-    adminPort: 8031
-    httpPort: 8030
+podAnnotations: {}
 
-  ingress:
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  clusterIP: 
+  adminPort: 8031
+  httpPort: 8030
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+
+  # Uncomment this to define your own hosts and override global.ingressSuffix
+  # hosts:
+  #     host:
+  #     paths: ['/']
+  tls: []
+  #  - secretName: my-acapy-tls
+  #    hosts:
+  #      - my-acapy.local
+  className: ""
+
+openshift:
+  route:
     enabled: false
-    annotations: {}
-      # kubernetes.io/ingress.class: nginx
-      # kubernetes.io/tls-acme: "true"
+    path: "/"
+    targetPort: http
+    timeout: 30s
+    tls:
+      enabled: true
+      insecureEdgeTerminationPolicy: None
+      termination: edge
+    wildcardPolicy: None
 
-    # Uncomment this to define your own hosts and override global.ingressSuffix
-    # hosts:
-    #     host:
-    #     paths: ['/']
-    tls: []
-    #  - secretName: my-acapy-tls
-    #    hosts:
-    #      - my-acapy.local
-    className: ""
+tails:
+  # -- Set to true to enable revocation (external tails server required)
+  enabled: false
 
-  openshift:
-    route:
-      enabled: false
-      path: "/"
-      targetPort: http
-      timeout: 30s
-      tls:
-        enabled: true
-        insecureEdgeTerminationPolicy: None
-        termination: edge
-      wildcardPolicy: None
+  # -- Override the otherwise ledger-specifically generated base URL of the external tails server
+  baseUrlOverride: ""
 
-  tails:
-    # -- Set to true to enable revocation (external tails server required)
-    enabled: false
+  # -- Override the otherwise ledger-specifically generated upload URL of the external tails server
+  uploadUrlOverride: ""
 
-    # -- Override the otherwise ledger-specifically generated base URL of the external tails server
-    baseUrlOverride: ""
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
 
-    # -- Override the otherwise ledger-specifically generated upload URL of the external tails server
-    uploadUrlOverride: ""
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
 
-  resources:
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
+nodeSelector: {}
 
-  autoscaling:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
+tolerations: []
 
-  nodeSelector: {}
-
-  tolerations: []
-
-  affinity: {}
+affinity: {}
 
 postgresql:
   # -- If true, the Postgres chart is deployed
