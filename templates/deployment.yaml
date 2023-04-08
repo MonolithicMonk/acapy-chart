@@ -14,9 +14,8 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- if and (not .Values.postgresql.enabled) (not .Values.global.persistence.existingSecret) }}
-        checksum/configDB: {{ include (print $.Template.BasePath "/db-secret.yaml") . | sha256sum }}
-        {{- end }}
+        checksum/secretAcapy: {{ include (print $.Template.BasePath "/acapy-secret.yaml") . | sha256sum }}
+        checksum/secreDB: {{ include (print $.Template.BasePath "/db-secret.yaml") . | sha256sum }}
         {{- if .Values.global.persistence.existingSecret }}
         rollme: {{ randAlphaNum 5 | quote }}
         {{- end }}
@@ -32,6 +31,7 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if not .Values.staticArgs.autoProvision }}
       initContainers:
         - name: acapy-provision
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -50,7 +50,6 @@ spec:
            --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
            --seed \"$(WALLET_SEED)\" \
            --genesis-transactions-list genesis-transaction-list.yaml \
-           --log-level {{ .Values.staticArgs.logLevel }} \
            "
           ]
           command:
@@ -81,6 +80,8 @@ spec:
             mountPath: "/home/indy/genesis-transaction-list.yaml"
             subPath: "genesis-transaction-list.yaml"
             readOnly: true
+      {{- end }}
+      
       containers:
         - name: acapy
           securityContext:
@@ -100,6 +101,9 @@ spec:
            --wallet-storage-config '{\"url\":\"{{ include "acapy.dbHost" . }}:{{ include "acapy.dbPort" . }}\",\"max_connections\":5}' \
            --wallet-storage-creds '{\"account\":\"$(POSTGRES_USERNAME)\",\"password\":\"$(POSTGRES_PASSWORD)\",\"admin_account\":\"$(POSTGRES_USERNAME)\",\"admin_password\":\"$(POSTGRES_PASSWORD)\"}' \
            --label {{ $acapyLabel }} \
+           {{- if .Values.staticArgs.autoProvision }}
+           --seed \"$(WALLET_SEED)\" \
+           {{- end }}
            {{- if .Values.tails.enabled }}
            --tails-server-base-url {{ include "acapy.tails.baseUrl" . }} \
            --tails-server-upload-url {{ include "acapy.tails.uploadUrl" . }} \
@@ -176,6 +180,13 @@ spec:
                 secretKeyRef:
                   name: {{ template "acapy.fullname" . }}-acapy
                   key: ACAPY_ADMIN_URL_API_KEY
+            {{- end }}
+            {{- if .Values.staticArgs.autoProvision }}
+            - name: WALLET_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "acapy.fullname" . }}-acapy
+                  key: ACAPY_AGENT_SEED
             {{- end }}
             - name: WALLET_KEY
               valueFrom:

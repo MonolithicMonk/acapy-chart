@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Check that a filename has been provided
+if [ -z "$1" ]
+  then
+    echo "Error: No filename provided."
+    exit 1
+fi
+
+# Check that the file exists
+if [ ! -f "$1" ]
+  then
+    echo "Error: File not found."
+    exit 1
+fi
+
+# Base64 encode the private key file and save the output to a new file
+base64_encoded_file="${1}.base64"
+base64 "$1" > "$base64_encoded_file"
+
+echo "Private key file has been encoded in base64 and saved to $base64_encoded_file"

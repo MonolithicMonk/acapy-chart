@@ -172,20 +172,12 @@ false
 determine acapy database hostname
 */}}
 {{- define "acapy.dbHost" -}}
-{{- if .Values.diode.enabled -}}
-    {{ template "diode.fullname" .Subcharts.diode }}.{{ .Release.Namespace | default "default" }}.svc.cluster.local
-{{- else -}} 
-    {{ .Values.db.host }}
-{{- end -}}
+  {{ .Values.db.host }}
 {{- end -}}
 
 {{/*
 determine acapy database port
 */}}
 {{- define "acapy.dbPort" -}}
-{{- if .Values.diode.enabled -}}
-    {{ .Values.diode.service.port }}
-{{- else -}} 
     {{ .Values.db.port }}
-{{- end -}}
 {{- end -}}
