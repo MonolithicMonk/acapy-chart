@@ -30,8 +30,11 @@ data:
     public-invites: {{ .Values.staticArgs.publicInvites }}
     plugin: 'aries_cloudagent.messaging.jsonld'
     outbound-transport: http
-    wallet-type: {{ .Values.staticArgs.walletType }}
     log-level: {{ .Values.staticArgs.logLevel }}
+    wallet-type: {{ .Values.staticArgs.walletType }}
+    wallet-allow-insecure-seed: {{ .Values.staticArgs.walletAllowInsecureSeed }}
+    multitenant: {{ .Values.staticArgs.multitenant }}
+    multitenant-admin: {{ .Values.staticArgs.multitenantAdmin }}
   genesis-transaction-list.yaml: |
     - id: bcovrinTest
       is_production: {{ include "acapy.writeLedger" (list . (dict "ledger" "bcovrin-test")) }}

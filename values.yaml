@@ -24,12 +24,29 @@ image:
   # --  Overrides the image tag whose default is the chart appVersion.
   tag: py36-1.16-1_0.7.4
 
+# If using diode cli, expose the inbound port
 endPointUrl: ""
 
 inbound: 
   module:
   host: 
   port:
+
+vault:
+  # Enable to obtain admin_key (api key), tenant jwtSecret, seed 
+  # and wallet_key as well as postgres username and password from vault
+  enabled: false
+  postgresql_admin_username: 
+  postgresql_admin_password: 
+  postgresUserGroup: 
+  postgres_ip: 
+  # Used to authenticate service accounts with vault
+  kubernetes_authentication_role_names:
+    database: 
+    tenant: 
+    external: 
+  vaultAddress: 
+  vaultCACertPath: 
 
 admin:
   # Specify the host and port on which to run the
@@ -42,7 +59,9 @@ admin:
   apiKey:
     enabled:
     # -- Please change: key used to protect acapy's admin endpoint
+    # Either set this OR set adminInsecureMode
     adminURLApiKey: ""
+    adminInsecureMode: 
 
 db:
   username:
@@ -52,6 +71,7 @@ db:
   database:
 
 # -- Please change: the agent seed, 32 characters e.g. a UUID without the dashes. If the ledger is bcovrin-test the seed will be registered automatically. In all other cases this needs to happen manually beforehand.
+# Do not set in multitenant mode
 agentSeed: ""
 # -- Please change: Wallet encryption key, be aware that if this value is changed later aca-py needs to be restarted with the '--wallet-rekey' param which is not mapped
 walletKey: ""
@@ -125,9 +145,22 @@ staticArgs:
   exchUseUnencryptedTags: true
   preserveExchangeRecords: false
   publicInvites: true
+  logLevel: debug
   # -- indy or askar
   walletType: askar
-  logLevel: debug
+  
+  # If this parameter is set, allows to use a custom seed to create a local DID
+  walletAllowInsecureSeed: true
+
+  # Multi Tenancy
+  # This enables multi-tenancy in ACA-Py
+  multitenant: false
+
+  # This enables the admin API for multi-tenancy. More information below
+  multitenantAdmin: true
+
+  # This sets the secret used for JWT creation/verification for sub wallets
+  jwtSecret: cOWwvAe7XqR3Q9BrvW7OnCFf0ZolPH57X3vROQkH
 
 imagePullSecrets: []
 nameOverride: ""

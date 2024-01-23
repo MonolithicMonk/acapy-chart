@@ -1,4 +1,4 @@
-{{- if not .Values.vault.enabled }}
+{{- if .Values.vault.enabled }}
 {{- $acapyLabel := include "acapy.label" . -}}
 {{- $globalName := include "global.name"  . -}}
 apiVersion: apps/v1
@@ -64,15 +64,36 @@ spec:
                 secretKeyRef:
                   name: {{ template "acapy.fullname" . }}-db
                   key: postgresql-username
-          envFrom:
-            - secretRef:
-                name: {{ template "acapy.fullname" . }}-acapy
+            - name: ACAPY_WALLET_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: seed
+            - name: ACAPY_WALLET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: wallet_key
+            {{- if .Values.staticArgs.multitenant }}
+            - name: ACAPY_MULTITENANT_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: acapy_multitenant_jwt_secret
+            {{- end }}
           volumeMounts:
             - name: ledger
               mountPath: "/home/indy/genesis-transaction-list.yaml"
               subPath: "genesis-transaction-list.yaml"
               readOnly: true
+            - name: vault-db-credentials
+              mountPath: "/mnt/vault-postgresql-credentials"
+              readOnly: true
+            - name: vault-acapy-kv-credentials
+              mountPath: "/mnt/vault-acapy-kv-credentials"
+              readOnly: true
       {{- end }}
+      serviceAccountName: vault-csi-provider
       containers:
         - name: acapy
           securityContext:
@@ -149,16 +170,35 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "acapy.fullname" . }}-db
+                  name: vault-db-credentials
                   key: postgresql-password
             - name: POSTGRES_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "acapy.fullname" . }}-db
+                  name: vault-db-credentials
                   key: postgresql-username
-          envFrom:
-            - secretRef:
-                name: {{ template "acapy.fullname" . }}-acapy
+            {{- if .Values.admin.apiKey.enabled }}
+            - name: ACAPY_ADMIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: admin_key
+            {{- else }}
+            - name: ACAPY_ADMIN_INSECURE_MODE
+              value: "true"
+            {{- end }}
+            - name: ACAPY_WALLET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: wallet_key
+            {{- if .Values.staticArgs.multitenant }}
+            - name: ACAPY_MULTITENANT_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vault-acapy-kv-credentials
+                  key: acapy_multitenant_jwt_secret
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /status/live
@@ -180,6 +220,12 @@ spec:
             mountPath: "/home/indy/genesis-transaction-list.yaml"
             subPath: "genesis-transaction-list.yaml"
             readOnly: true
+          - name: vault-db-credentials
+            mountPath: "/mnt/vault-postgresql-credentials"
+            readOnly: true
+          - name: vault-acapy-kv-credentials
+            mountPath: "/mnt/vault-acapy-kv-credentials"
+            readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
@@ -195,6 +241,18 @@ spec:
             items:
             - key: "genesis-transaction-list.yaml"
               path: "genesis-transaction-list.yaml"
+        - name: vault-db-credentials
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "read-db-credentials"
+        - name: vault-acapy-kv-credentials
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "vault-acapy-kv-credentials"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

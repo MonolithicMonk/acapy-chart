@@ -1,3 +1,22 @@
 # ignore local overide files for testing
 override.yaml
 
+# TLS dir
+tls/
+
+deployment-prev*
+
+logs.log
+no-tls.rs
+
+# secret-provider
+secret-provider/
+
+# vault-secrets-init files
+vault-secrets-init/*.txt
+vault-secrets-init/test.sh
+vault-secrets-init/*key
+vault-secrets-init/*asc
+vault-secrets-init/logs.log
+vault-secrets-init/postgresql-test.sh
+vault-secrets-init/start.sh
