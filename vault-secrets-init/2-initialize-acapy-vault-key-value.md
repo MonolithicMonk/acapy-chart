@@ -42,7 +42,7 @@
   # Use as BPA config template
   vault kv metadata put -mount="secret/bpa" \
     -max-versions=30 -delete-version-after="768h" \
-    -custom-metadata=Region="US South" \
+    -custom-metadata=Region="US South Central" \
     -custom-metadata=Component="Acapy" \
     -custom-metadata=Component="BPA" \
     bpa_tenant_id

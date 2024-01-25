@@ -32,6 +32,14 @@ inbound:
   host: 
   port:
 
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: false
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use. If not set and create is true, a name is generated using the fullname template
+  name: 
+
 vault:
   # Enable to obtain admin_key (api key), tenant jwtSecret, seed 
   # and wallet_key as well as postgres username and password from vault
@@ -43,9 +51,10 @@ vault:
   # Used to authenticate service accounts with vault
   kubernetes_authentication_role_names:
     database: 
-    tenant: 
-    external: 
-  vaultAddress: 
+    acapy: 
+    sharedServices: 
+  vaultAddress:
+  vault_server_url:
   vaultCACertPath: 
 
 admin:

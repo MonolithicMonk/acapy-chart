@@ -2,16 +2,9 @@
 
 set -e
 
-# Script to create a new Vault profile for a new acapy deployment
-# Generates:
-# - Database name
-# - PostgreSQL username
-# - Group name
-# - postgres_ip
-# - db_port
-# Then echoes the commands to create the new profile in Vault and a PostgreSQL database
+# This script creates a new Vault profile for an ACA-Py deployment.
 
-# Function to add "acapy" to the beginning of a random word
+# Function to generate a random lowercase letter prefix
 prefix_acapy() {
   echo "acapy"
 }
@@ -21,121 +14,110 @@ generate_random_word() {
   shuf -n 1 /usr/share/dict/words | tr -cd '[:alpha:]'
 }
 
-# Ask for deployment name, use random word if left blank
+# Collect deployment name from user input, or use a random word if left blank
 read -p "Enter a name for this deployment (random word will be used if left blank): " deploy_name
 if [ -z "$deploy_name" ]; then
   echo "No deployment name entered. Using a random word."
   deploy_name=$(generate_random_word)
 fi
 
-# Normalize deployment name: 
-# 1. Convert to lowercase
-# 2. Replace spaces with hyphens
-# 3. Ensure it starts with a lowercase letter
-# 4. Remove non-letter characters except hyphens
+# Normalize deployment name by converting to lowercase, replacing spaces with hyphens, and ensuring it starts with a lowercase letter
 deploy_name=$(echo "$deploy_name" | tr '[:upper:]' '[:lower:]' | sed 's/ //g' | sed 's/[^a-z0-9]//g')
+if ! [[ $deploy_name =~ ^[a-z] ]]; then
+  deploy_name="$(prefix_acapy)$deploy_name"
+fi
 
-# Add acapy to the begining of every deployment name
-deploy_name="$(prefix_acapy)$deploy_name"
-
-# Generate a database name with a Unix timestamp
+# Generate database and related configurations
 timestamp=$(date +"%s")
-db_name="${deploy_name}${timestamp}database"
-
-# PostgreSQL username (maximum 63 characters)
+db_name="${deploy_name}${timestamp}database"  # Database name including a Unix timestamp
 max_length=63
 timestamp_length=${#timestamp}
-available_length=$((max_length - timestamp_length - 11)) # 11 characters for '_rootuser_'
+available_length=$((max_length - timestamp_length - 9))  # 9 characters for 'rootuser'
 deploy_name_cut=${deploy_name:0:$available_length}
-vault_postgres_root_user="${deploy_name_cut}${timestamp}rootuser"
+vault_postgres_root_user="${deploy_name_cut}${timestamp}rootuser"  # PostgreSQL username
+pg_password_length=$((RANDOM % 10 + 25))  # Password length between 25 and 34
+vault_postgres_password=$(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${pg_password_length} | head -n 1)  # PostgreSQL password
+vault_postgres_user_group="${deploy_name}${timestamp}group"  # Group name
 
-# PostgreSQL password (maximum 100 characters)
-# Doesn't need to be too strong since it will be rotated immediately by Vault
-pg_password_length=$((RANDOM % 10 + 25)) # Random length between 80 and 99
-vault_postgres_password=$(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${pg_password_length} | head -n 1)
-
-# Generate group name
-vault_postgres_user_group="${deploy_name}${timestamp}group"
-
-# Determine the project root directory relative to the script location
+# Retrieve project root directory
 project_root_dir="$(dirname "$(cd "$(dirname "$0")" && pwd)")"
 
-# Base64 encode password policy
+# Load and encode password policy from a file
 vault_password_policy=$(cat ${project_root_dir}/policies/password-policy.hcl | base64 -w 0)
 
-# Acquire db_host from .db.host path in ../override.yaml file using yq
+# Retrieve database and vault configuration using 'yq' from an override YAML file
 db_host=$(yq e '.db.host' "${project_root_dir}/override.yaml")
+if [ -z "$db_host" ] || [ "$db_host" = "null" ]; then
+    echo "Error: db_host not set or is null. Exiting."
+    exit 1
+fi
 
-# Acquire postgres_ip from .vault.postgres_ip path in ../override.yaml file using yq
 postgres_ip=$(yq e '.vault.postgres_ip' "${project_root_dir}/override.yaml")
+if [ -z "$postgres_ip" ] || [ "$postgres_ip" = "null" ]; then
+    echo "Error: postgres_ip not set or is null. Exiting."
+    exit 1
+fi
 
-# Acquire db_port from .db.port path in ../override.yaml file using yq
 db_port=$(yq e '.db.port' "${project_root_dir}/override.yaml")
+if [ -z "$db_port" ] || [ "$db_port" = "null" ]; then
+    echo "Error: db_port not set or is null. Exiting."
+    exit 1
+fi
 
-
-# Vault secrets file
-secrets_file="${project_root_dir}/vault-secrets-init/0-vault-init.txt"
-
-# Retrieve the root token from the file
-encrypted_token=$(grep "root_token" $secrets_file | awk '{print $NF}')
-
-# Decrypt the root token
-vault_auth_token=$(echo "$encrypted_token" | base64 --d | gpg -d)
-
-# Acquire vault_server_url from .vault.vault_server_url path in ../override.yaml file using yq
 vault_server_url=$(yq e '.vault.vault_server_url' "${project_root_dir}/override.yaml")
+if [ -z "$vault_server_url" ] || [ "$vault_server_url" = "null" ]; then
+    echo "Error: vault_server_url not set or is null. Exiting."
+    exit 1
+fi
 
-# Password policy name
+
+# Process Vault secrets
+secrets_file="${project_root_dir}/vault-secrets-init/0-vault-init.txt"
+encrypted_token=$(grep "root_token" $secrets_file | awk '{print $NF}')  # Retrieve the root token from the file
+vault_auth_token=$(echo "$encrypted_token" | base64 --d | gpg -d)  # Decrypt the root token
+
+# Vault configuration for PostgreSQL
 postgresql_password_policy_name="postgresql"
-
-# Set postgresql_key_name value
 postgresql_key_name="postgresql_kv_secret"
-
-# Set postgresql_secret_path value
 postgresql_secret_path="secret/postgresql/admin"
 
-# Retrieve admin username from vault at postgresql_secret_path and postgresql_key_name
+# Retrieve PostgreSQL admin credentials from Vault
 postgresql_admin_username=$(curl -s -k --header "X-Vault-Token: $vault_auth_token" $vault_server_url/v1/$postgresql_secret_path/data/$postgresql_key_name | jq -r '.data.data.postgresql_admin_username')
-
-# Retrieve admin password from vault at postgresql_secret_path and postgresql_key_name
 postgresql_admin_password=$(curl -s -k --header "X-Vault-Token: $vault_auth_token" $vault_server_url/v1/$postgresql_secret_path/data/$postgresql_key_name | jq -r '.data.data.postgresql_admin_password')
 
 # Set the PGPASSWORD environment variable
 export PGPASSWORD="$postgresql_admin_password"
 
-## Create a postgresql "group" using the admin credentials and sql statements
-echo -e "\n# =============================="
-echo "# 1. Create a postgresql \"group\""
-echo -e "# ==============================\n"
+## Create a postgresql "group", user and database
+echo -e "\n# ===================================================="
+echo "# 1. Create a postgresql \"group\"", user and database
+echo -e "# ====================================================\n"
 
-# Execute the SQL commands using psql
+# Connect to PostgreSQL and execute the following:
+# We utilize the 'postgres' schema as ACA-Py and Askar default to it.
+# Currently, there's no option to alter the default schema for ACA-Py and Askar.
+
 psql -U "$postgresql_admin_username" -h "$postgres_ip" -p $db_port <<EOF
 CREATE DATABASE "$db_name";
 REVOKE ALL ON DATABASE "$db_name" FROM PUBLIC;
+
+\connect "$db_name"
+
+CREATE SCHEMA IF NOT EXISTS postgres;
+
 CREATE ROLE "$vault_postgres_user_group";
-GRANT CONNECT ON DATABASE "$db_name" TO "$vault_postgres_user_group";
-GRANT ALL PRIVILEGES ON SCHEMA public TO "$vault_postgres_user_group";
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "$vault_postgres_user_group";
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "$vault_postgres_user_group";
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO "$vault_postgres_user_group";
-ALTER DATABASE "$db_name" OWNER TO "$vault_postgres_user_group";
-EOF
-
-## Create a postgresql user
-echo -e "\n# ==========================="
-echo "# 2. Create a postgresql user"
-echo -e "# ===========================\n"
-psql -U "$postgresql_admin_username" -h "$postgres_ip" -p $db_port <<EOF
-CREATE USER "$vault_postgres_root_user" WITH ENCRYPTED PASSWORD '$vault_postgres_password' CREATEROLE;
-EOF
-
-## Add user to group
-echo -e "\n# ===================="
-echo "# 3. Add user to group"
-echo -e "# ====================\n"
-psql -U "$postgresql_admin_username" -h "$postgres_ip" -p $db_port <<EOF
+CREATE USER "$vault_postgres_root_user" WITH ENCRYPTED PASSWORD '$vault_postgres_password' CREATEDB CREATEROLE;
 GRANT "$vault_postgres_user_group" TO "$vault_postgres_root_user";
+
+GRANT CONNECT ON DATABASE "$db_name" TO "$vault_postgres_user_group";
+ALTER DATABASE "$db_name" OWNER TO "$vault_postgres_user_group";
+
+GRANT ALL PRIVILEGES ON SCHEMA postgres TO "$vault_postgres_user_group";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA postgres TO "$vault_postgres_user_group";
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA postgres TO "$vault_postgres_user_group";
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA postgres TO "$vault_postgres_user_group";
 EOF
+
 
 ## Create a Trigger to set Ownership of Created Objects
 echo -e "\n# ========================================================"
@@ -154,7 +136,7 @@ DECLARE
   obj record;
 BEGIN
   FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands() LOOP
-    IF obj.schema_name IN ('public') THEN
+    IF obj.schema_name IN ('postgres') THEN
       IF obj.command_tag IN ('CREATE TABLE', 'CREATE FUNCTION', 'CREATE SCHEMA') THEN
         EXECUTE format('ALTER %s %s OWNER TO $vault_postgres_user_group', substring(obj.command_tag from 8), obj.object_identity);
       ELSIF obj.command_tag = 'CREATE SEQUENCE' AND NOT EXISTS(SELECT s.relname FROM pg_class s JOIN pg_depend d ON d.objid = s.oid WHERE s.relkind = 'S' AND d.deptype='a' and s.relname = split_part(obj.object_identity, '.', 2)) THEN
@@ -205,7 +187,6 @@ else
 fi
 
 # Enable Database Secrets Engine
-
 # Database engine payload
 echo -e "\n# Enable Database Secrets Engine... \n"
 database_engine_payload=$(
@@ -232,7 +213,7 @@ else
     echo "Database Secrets Engine now enabled."
 fi
 
-# Configure Database Secrets Engine for the $vault_postgres_user_group path
+# Configure Database Secrets Engine
 echo -e "\n# Configure Database Secrets Engine... \n"
 database_config_payload=$(
   cat <<EOF
@@ -261,15 +242,14 @@ echo -e "\n# ===================================================="
 echo "# 6. Create Dynamic Credentials Based on Previous Role"
 echo -e "# ====================================================\n"
 
+# Add a role with CREATEDB privileges so that acapy can create a database
+# Acapy currently doesn't create wallets in existing databases, so this is required
 role_payload=$(
   cat <<EOF
 {
   "db_name": "$vault_postgres_user_group",
   "creation_statements": [
-    "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'",
-    "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $vault_postgres_user_group",
-    "GRANT SELECT, USAGE, UPDATE ON ALL SEQUENCES IN SCHEMA public TO $vault_postgres_user_group",
-    "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO $vault_postgres_user_group",
+    "CREATE ROLE \"{{name}}\" WITH LOGIN CREATEDB PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'",
     "GRANT $vault_postgres_user_group TO \"{{name}}\""
   ],
   "revocation_statements": [
@@ -372,15 +352,34 @@ EOF
 )
 curl -k --header "X-Vault-Token: $vault_auth_token" --request POST --data "$role_payload" "$vault_server_url/v1/auth/kubernetes/role/$database_auth_role_name"
 
-# 4. Echo the values to update in values.yaml/override.yaml
-echo -e "\n# CRITICAL - UPDATE YOUR values.yaml/override.yaml FILE WITH THE FOLLOWING: \n"
-echo -e "{{ .Values.bpa.serviceAccount.name }}:  $vault_postgres_user_group\n"
-echo -e "{{ .Values.bpa.db.database }}: $db_name\n"
+# The following values will be updated automatically in override-db.yaml file using yq:
+# db.database: $db_name
+# serviceAccount.name: $vault_postgres_user_group
+# vault.postgresUserGroup: $vault_postgres_user_group
+# vault.kubernetes_authentication_role_names.database: $database_auth_role_name
+db_name_temp=${db_name}_temp
+echo -e "\n# ========== CRITICAL UPDATE REQUIRED =========="
 
-echo -e "{{ .Values.vault.postgresUserGroup }}:  $vault_postgres_user_group\n"
-echo -e "{{ .Values.vault.kubernetes_authentication_role_names.database }}: $database_auth_role_name\n"
+echo -e "\n# =========================================================================================="
+echo "Updating your override-db.yaml file with the following:"
+echo -e " - serviceAccount.name: $vault_postgres_user_group"
+echo -e " - db.database: $db_name_temp"
+echo -e " - vault.postgresUserGroup: $vault_postgres_user_group"
+echo -e " - vault.kubernetes_authentication_role_names.database: $database_auth_role_name"
+echo -e "# ==============================================================================================\n"
+
+yq e -i ".serviceAccount.name = \"$vault_postgres_user_group\"" "${project_root_dir}/override-db.yaml"
+yq e -i ".db.database = \"$db_name_temp\"" "${project_root_dir}/override-db.yaml"
+yq e -i ".vault.postgresUserGroup = \"$vault_postgres_user_group\"" "${project_root_dir}/override-db.yaml"
+yq e -i ".vault.kubernetes_authentication_role_names.database = \"$database_auth_role_name\"" "${project_root_dir}/override-db.yaml"
+
+echo -e "# ------------------------------------------------\n"
 
 # Echo the vault read path for the postgresql role
-echo -e "Http Read Path: $vault_server_url/v1/database/creds/$vault_postgres_user_group\n"
+echo -e "# Vault PostgreSQL Role Access Information"
+echo -e "# HTTP Read Path:"
+echo -e "  $vault_server_url/v1/database/creds/$vault_postgres_user_group\n"
 # CLI read command for the postgresql role
-echo -e "CLI READ COMMAND: vault read database/creds/$vault_postgres_user_group\n"
+echo -e "# CLI Read Command:"
+echo -e "  vault read database/creds/$vault_postgres_user_group\n"
+echo -e "# ===============================================\n"

@@ -71,6 +71,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Create the name of the service account to use
+*/}}
+{{- define "acapy.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "acapy.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
 generate hosts if not overriden
 */}}
 {{- define "acapy.host" -}}

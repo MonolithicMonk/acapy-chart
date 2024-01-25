@@ -1,5 +1,6 @@
 # ignore local overide files for testing
 override.yaml
+override-*.yaml
 
 # TLS dir
 tls/
